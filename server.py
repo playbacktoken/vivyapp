@@ -1,9 +1,10 @@
-Click "Add file" → "Create new file"
-Name it: server.py
-Paste this content:
+Go to your GitHub repo
+Click on server.py
+Click the pencil icon (Edit)
+Delete EVERYTHING in the file
+Paste this clean version:
 from fastapi import FastAPI, APIRouter, HTTPException
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
@@ -13,7 +14,6 @@ from typing import List, Optional, Dict
 import uuid
 from datetime import datetime, timedelta
 
-# MongoDB connection
 mongo_url = os.environ.get('MONGO_URL', os.environ.get('MONGODB_URL', 'mongodb://localhost:27017'))
 db_name = os.environ.get('DB_NAME', 'vivy')
 client = AsyncIOMotorClient(mongo_url)
@@ -22,7 +22,6 @@ db = client[db_name]
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
-# Global currencies
 CURRENCIES = {
     "USD": {"name": "US Dollar", "symbol": "$"},
     "EUR": {"name": "Euro", "symbol": "€"},
@@ -42,31 +41,10 @@ CURRENCIES = {
     "MXN": {"name": "Mexican Peso", "symbol": "$"},
     "BRL": {"name": "Brazilian Real", "symbol": "R$"},
     "ZAR": {"name": "South African Rand", "symbol": "R"},
-    "RUB": {"name": "Russian Ruble", "symbol": "₽"},
-    "TRY": {"name": "Turkish Lira", "symbol": "₺"},
-    "PLN": {"name": "Polish Zloty", "symbol": "zł"},
     "THB": {"name": "Thai Baht", "symbol": "฿"},
-    "IDR": {"name": "Indonesian Rupiah", "symbol": "Rp"},
-    "MYR": {"name": "Malaysian Ringgit", "symbol": "RM"},
     "PHP": {"name": "Philippine Peso", "symbol": "₱"},
-    "CZK": {"name": "Czech Koruna", "symbol": "Kč"},
-    "ILS": {"name": "Israeli Shekel", "symbol": "₪"},
-    "CLP": {"name": "Chilean Peso", "symbol": "$"},
-    "AED": {"name": "UAE Dirham", "symbol": "د.إ"},
-    "SAR": {"name": "Saudi Riyal", "symbol": "﷼"},
-    "TWD": {"name": "Taiwan Dollar", "symbol": "NT$"},
-    "DKK": {"name": "Danish Krone", "symbol": "kr"},
-    "COP": {"name": "Colombian Peso", "symbol": "$"},
-    "ARS": {"name": "Argentine Peso", "symbol": "$"},
-    "VND": {"name": "Vietnamese Dong", "symbol": "₫"},
-    "EGP": {"name": "Egyptian Pound", "symbol": "£"},
-    "PKR": {"name": "Pakistani Rupee", "symbol": "₨"},
-    "NGN": {"name": "Nigerian Naira", "symbol": "₦"},
-    "BDT": {"name": "Bangladeshi Taka", "symbol": "৳"},
-    "HUF": {"name": "Hungarian Forint", "symbol": "Ft"},
 }
 
-# Models
 class Participant(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
@@ -117,67 +95,52 @@ class SettleUpResponse(BaseModel):
     currency: str
     currency_symbol: str
 
-# Settlement calculation
 def calculate_settlements(participants: List[Participant], expenses: List[Expense]) -> List[Settlement]:
     if not participants or not expenses:
         return []
-    
     balances: Dict[str, float] = {p.id: 0.0 for p in participants}
     participant_map = {p.id: p for p in participants}
-    
     for expense in expenses:
         if not expense.split_among:
             continue
-        
         share = expense.amount / len(expense.split_among)
-        
         for person_id in expense.split_among:
             balances[person_id] -= share
-        
         if expense.payers:
             for payer in expense.payers:
                 if payer.participant_id in balances:
                     balances[payer.participant_id] += payer.amount
         elif expense.payer_id:
             balances[expense.payer_id] += expense.amount
-    
     debtors = []
     creditors = []
-    
     for person_id, balance in balances.items():
         if balance < -0.01:
             debtors.append((person_id, -balance))
         elif balance > 0.01:
             creditors.append((person_id, balance))
-    
     debtors.sort(key=lambda x: x[1], reverse=True)
     creditors.sort(key=lambda x: x[1], reverse=True)
-    
     settlements = []
     i, j = 0, 0
     while i < len(debtors) and j < len(creditors):
         debtor_id, debt = debtors[i]
         creditor_id, credit = creditors[j]
         amount = min(debt, credit)
-        
         if amount > 0.01:
             settlements.append(Settlement(
                 from_participant=participant_map[debtor_id],
                 to_participant=participant_map[creditor_id],
                 amount=round(amount, 2)
             ))
-        
         debtors[i] = (debtor_id, debt - amount)
         creditors[j] = (creditor_id, credit - amount)
-        
         if debtors[i][1] < 0.01:
             i += 1
         if creditors[j][1] < 0.01:
             j += 1
-    
     return settlements
 
-# API Routes
 @api_router.get("/")
 async def root():
     return {"message": "Welcome to Vivy API"}
@@ -207,10 +170,7 @@ async def add_participant(session_id: str, input: ParticipantCreate):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     participant = Participant(name=input.name)
-    await db.sessions.update_one(
-        {"id": session_id},
-        {"$push": {"participants": participant.dict()}}
-    )
+    await db.sessions.update_one({"id": session_id}, {"$push": {"participants": participant.dict()}})
     session = await db.sessions.find_one({"id": session_id})
     return Session(**session)
 
@@ -222,10 +182,7 @@ async def remove_participant(session_id: str, participant_id: str):
     for expense in session.get("expenses", []):
         if expense["payer_id"] == participant_id or participant_id in expense["split_among"]:
             raise HTTPException(status_code=400, detail="Cannot remove participant involved in expenses")
-    await db.sessions.update_one(
-        {"id": session_id},
-        {"$pull": {"participants": {"id": participant_id}}}
-    )
+    await db.sessions.update_one({"id": session_id}, {"$pull": {"participants": {"id": participant_id}}})
     session = await db.sessions.find_one({"id": session_id})
     return Session(**session)
 
@@ -234,13 +191,10 @@ async def add_expense(session_id: str, input: ExpenseCreate):
     session = await db.sessions.find_one({"id": session_id})
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    
     participant_ids = [p["id"] for p in session.get("participants", [])]
-    
     for person_id in input.split_among:
         if person_id not in participant_ids:
             raise HTTPException(status_code=400, detail=f"Participant {person_id} is not in this session")
-    
     if input.payers:
         for payer in input.payers:
             if payer.participant_id not in participant_ids:
@@ -253,7 +207,6 @@ async def add_expense(session_id: str, input: ExpenseCreate):
             raise HTTPException(status_code=400, detail="Payer is not a participant")
     else:
         raise HTTPException(status_code=400, detail="Either payer_id or payers must be provided")
-    
     expense = Expense(
         description=input.description,
         amount=input.amount,
@@ -261,11 +214,7 @@ async def add_expense(session_id: str, input: ExpenseCreate):
         payers=[p.dict() for p in input.payers] if input.payers else None,
         split_among=input.split_among
     )
-    
-    await db.sessions.update_one(
-        {"id": session_id},
-        {"$push": {"expenses": expense.dict()}}
-    )
+    await db.sessions.update_one({"id": session_id}, {"$push": {"expenses": expense.dict()}})
     session = await db.sessions.find_one({"id": session_id})
     return Session(**session)
 
@@ -274,10 +223,7 @@ async def remove_expense(session_id: str, expense_id: str):
     session = await db.sessions.find_one({"id": session_id})
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    await db.sessions.update_one(
-        {"id": session_id},
-        {"$pull": {"expenses": {"id": expense_id}}}
-    )
+    await db.sessions.update_one({"id": session_id}, {"$pull": {"expenses": {"id": expense_id}}})
     session = await db.sessions.find_one({"id": session_id})
     return Session(**session)
 
@@ -297,51 +243,8 @@ async def settle_up(session_id: str):
         currency_symbol=currency_info["symbol"]
     )
 
-@api_router.delete("/sessions/{session_id}")
-async def delete_session(session_id: str):
-    session = await db.sessions.find_one({"id": session_id})
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-    await db.sessions.delete_one({"id": session_id})
-    return {"message": "Session deleted successfully"}
-
-@api_router.get("/stats")
-async def get_stats():
-    total_sessions = await db.sessions.count_documents({})
-    
-    pipeline = [
-        {"$project": {"expense_count": {"$size": {"$ifNull": ["$expenses", []]}}}},
-        {"$group": {"_id": None, "total": {"$sum": "$expense_count"}}}
-    ]
-    expense_result = await db.sessions.aggregate(pipeline).to_list(1)
-    total_expenses = expense_result[0]["total"] if expense_result else 0
-    
-    pipeline_participants = [
-        {"$project": {"participant_count": {"$size": {"$ifNull": ["$participants", []]}}}},
-        {"$group": {"_id": None, "total": {"$sum": "$participant_count"}}}
-    ]
-    participant_result = await db.sessions.aggregate(pipeline_participants).to_list(1)
-    total_participants = participant_result[0]["total"] if participant_result else 0
-    
-    seven_days_ago = datetime.utcnow() - timedelta(days=7)
-    active_sessions = await db.sessions.count_documents({"created_at": {"$gte": seven_days_ago}})
-    
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    sessions_today = await db.sessions.count_documents({"created_at": {"$gte": today_start}})
-    
-    return {
-        "total_sessions": total_sessions,
-        "total_expenses": total_expenses,
-        "total_participants": total_participants,
-        "active_sessions_7d": active_sessions,
-        "sessions_today": sessions_today,
-        "generated_at": datetime.utcnow().isoformat()
-    }
-
-# Include API router
 app.include_router(api_router)
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -350,27 +253,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve frontend
-from fastapi.responses import HTMLResponse
-
-INDEX_HTML = open("index.html").read() if os.path.exists("index.html") else "<h1>Vivy API</h1>"
+INDEX_HTML = ""
+if os.path.exists("index.html"):
+    with open("index.html", "r") as f:
+        INDEX_HTML = f.read()
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
-    return INDEX_HTML
+    return INDEX_HTML or "<h1>Vivy API Running</h1>"
 
 @app.get("/session/{session_id}", response_class=HTMLResponse)
 async def serve_session(session_id: str):
-    return INDEX_HTML
+    return INDEX_HTML or "<h1>Vivy API Running</h1>"
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
-
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
