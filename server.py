@@ -1,7 +1,3 @@
-Click on server.py
-Click the pencil icon (Edit)
-Delete EVERYTHING in the file
-Paste this clean version:
 from fastapi import FastAPI, APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 from starlette.middleware.cors import CORSMiddleware
