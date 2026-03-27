@@ -350,24 +350,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve static files (frontend)
-static_dir = os.path.join(os.path.dirname(__file__), "static")
-if os.path.exists(static_dir):
-    app.mount("/session", StaticFiles(directory=static_dir, html=True), name="session_static")
-    app.mount("/_expo", StaticFiles(directory=os.path.join(static_dir, "_expo")), name="expo_static")
-    app.mount("/assets", StaticFiles(directory=os.path.join(static_dir, "assets")), name="assets_static")
-    
-    @app.get("/")
-    async def serve_index():
-        return FileResponse(os.path.join(static_dir, "index.html"))
-    
-    @app.get("/stats")
-    async def serve_stats():
-        return FileResponse(os.path.join(static_dir, "stats.html"))
-    
-    @app.get("/session/{session_id}")
-    async def serve_session(session_id: str):
-        return FileResponse(os.path.join(static_dir, "session", "[id].html"))
+# Serve frontend
+from fastapi.responses import HTMLResponse
+
+INDEX_HTML = open("index.html").read() if os.path.exists("index.html") else "<h1>Vivy API</h1>"
+
+@app.get("/", response_class=HTMLResponse)
+async def serve_index():
+    return INDEX_HTML
+
+@app.get("/session/{session_id}", response_class=HTMLResponse)
+async def serve_session(session_id: str):
+    return INDEX_HTML
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
