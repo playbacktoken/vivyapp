@@ -1,3 +1,9 @@
+Let's fix it and make it look better:
+
+Go to your GitHub repo → click index.html
+Click the pencil icon (Edit)
+Delete EVERYTHING in the file
+Paste this clean version (scroll down - it's long but just select all and paste):
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,12 +14,13 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0a; color: #fff; min-height: 100vh; }
         .container { max-width: 500px; margin: 0 auto; padding: 20px; }
-        h1 { font-size: 2.5rem; text-align: center; margin: 30px 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h1 { font-size: 2.5rem; text-align: center; margin: 30px 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         h2 { font-size: 1.3rem; margin: 20px 0 10px; color: #ccc; }
         .card { background: #1a1a1a; border-radius: 12px; padding: 20px; margin: 15px 0; border: 1px solid #333; }
         input, select { width: 100%; padding: 14px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; font-size: 16px; margin: 8px 0; }
         input:focus, select:focus { outline: none; border-color: #667eea; }
-        button { width: 100%; padding: 14px; border-radius: 8px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; margin: 8px 0; transition: transform 0.1s; }
+        button { width: 100%; padding: 14px; border-radius: 8px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; margin: 8px 0; transition: transform 0.1s, opacity 0.1s; }
+        button:hover { opacity: 0.9; }
         button:active { transform: scale(0.98); }
         .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; }
         .btn-secondary { background: #333; color: #fff; }
@@ -34,19 +41,18 @@
         .total { text-align: center; font-size: 1.5rem; color: #667eea; margin: 20px 0; }
         .link-box { background: #222; padding: 12px; border-radius: 8px; word-break: break-all; font-size: 0.9rem; color: #4ade80; }
         .tabs { display: flex; gap: 10px; margin: 15px 0; }
-        .tab { flex: 1; padding: 12px; text-align: center; background: #222; border-radius: 8px; cursor: pointer; }
+        .tab { flex: 1; padding: 12px; text-align: center; background: #222; border-radius: 8px; cursor: pointer; transition: background 0.2s; }
         .tab.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .error { color: #ff6b6b; text-align: center; padding: 10px; }
-        .loading { text-align: center; padding: 40px; color: #888; }
         .back-btn { background: none; border: none; color: #667eea; font-size: 1rem; cursor: pointer; padding: 10px 0; width: auto; }
         .donate-btn { background: linear-gradient(135deg, #635bff 0%, #7c3aed 100%); margin-top: 30px; }
+        .subtitle { text-align: center; color: #888; margin-bottom: 30px; font-size: 1.1rem; }
     </style>
 </head>
 <body>
     <div class="container">
         <div id="home-screen">
             <h1>Vivy</h1>
-            <p style="text-align: center; color: #888; margin-bottom: 30px;">Split expenses with friends, anywhere in the world</p>
+            <p class="subtitle">Split expenses with friends, anywhere in the world</p>
             
             <div class="card">
                 <h2>Create New Session</h2>
@@ -75,10 +81,10 @@
             <button class="back-btn" onclick="goHome()">← Back to Home</button>
             <h1 id="session-title">Session</h1>
             <div class="link-box" id="share-link"></div>
-            <button class="btn-small btn-secondary" onclick="copyLink()" style="margin: 10px 0;">Copy Link</button>
+            <button class="btn-small btn-secondary" onclick="copyLink()" style="margin: 10px 0;">📋 Copy Link</button>
             
             <div class="card">
-                <h2>Participants</h2>
+                <h2>👥 Participants</h2>
                 <div id="participants-list"></div>
                 <div style="display: flex; gap: 10px; margin-top: 10px;">
                     <input type="text" id="new-participant" placeholder="Name" style="flex: 1;">
@@ -87,7 +93,7 @@
             </div>
             
             <div class="card">
-                <h2>Add Expense</h2>
+                <h2>💸 Add Expense</h2>
                 <input type="text" id="expense-desc" placeholder="Description (e.g., Dinner)">
                 <input type="number" id="expense-amount" placeholder="Amount" step="0.01">
                 
@@ -113,7 +119,7 @@
             </div>
             
             <div class="card">
-                <h2>Expenses</h2>
+                <h2>📝 Expenses</h2>
                 <div id="expenses-list"></div>
                 <div class="total" id="total-amount">Total: $0.00</div>
             </div>
@@ -121,7 +127,7 @@
             <button class="btn-success" onclick="settleUp()" style="font-size: 1.2rem; padding: 18px;">💰 Settle Up</button>
             
             <div id="settlements" class="card hidden">
-                <h2>Who Pays Who</h2>
+                <h2>✅ Who Pays Who</h2>
                 <div id="settlements-list"></div>
             </div>
         </div>
@@ -242,7 +248,7 @@
             list.innerHTML = currentSession.participants.map(p => 
                 `<div class="participant">
                     <span>${p.name}</span>
-                    <button class="btn-small btn-danger" onclick="removeParticipant('${p.id}')">×</button>
+                    <button class="btn-small btn-danger" onclick="removeParticipant('${p.id}')">✕</button>
                 </div>`
             ).join('') || '<p style="color:#888">No participants yet</p>';
             
@@ -354,7 +360,7 @@
                         <span>${e.description}</span>
                         <span class="expense-amount">${symbol}${e.amount.toFixed(2)}</span>
                     </div>
-                    <div class="expense-details">Paid by: ${payer || 'Unknown'}<br>Split: ${splitNames}</div>
+                    <div class="expense-details">Paid by: ${payer || 'Unknown'} · Split: ${splitNames}</div>
                     <button class="btn-small btn-danger" onclick="removeExpense('${e.id}')" style="margin-top:8px">Remove</button>
                 </div>`;
             }).join('') || '<p style="color:#888">No expenses yet</p>';
@@ -380,7 +386,7 @@
                 const list = document.getElementById('settlements-list');
                 
                 if (data.settlements.length === 0) {
-                    list.innerHTML = '<p style="color:#4ade80;text-align:center">All settled up! 🎉</p>';
+                    list.innerHTML = '<p style="color:#4ade80;text-align:center;font-size:1.2rem">All settled up! 🎉</p>';
                 } else {
                     list.innerHTML = data.settlements.map(s => 
                         `<div class="settlement">
