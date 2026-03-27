@@ -1,4 +1,3 @@
-Go to your GitHub repo
 Click on server.py
 Click the pencil icon (Edit)
 Delete EVERYTHING in the file
